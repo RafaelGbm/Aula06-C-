@@ -1,0 +1,23 @@
+# Operações da Aula 7 — cole no Nitro (http://localhost:5231/graphql)
+# e informe as variáveis indicadas acima de cada operação.
+
+# Variáveis:
+# {
+#   "input": {
+#     "nome": "Webcam 4K",
+#     "categoria": "Vídeo",
+#     "preco": 799.90,
+#     "estoque": 4
+#   }
+# }
+mutation CriarProduto($input: CriarProdutoInput!) {
+  criarProduto(input: $input) {
+    produto {
+      id
+      nome
+      categoria
+      preco
+      estoque
+    }
+  }
+}

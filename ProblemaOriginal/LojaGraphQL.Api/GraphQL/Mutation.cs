@@ -1,10 +1,16 @@
+using System.Threading;
+using System.Threading.Tasks;
+using LojaGraphQL.Api.Data;
 using LojaGraphQL.Api.Models;
 
 namespace LojaGraphQL.Api.GraphQL;
 
 public sealed class Mutation
 {
-    public CriarProdutoPayload CriarProduto(CriarProdutoInput input)
+    public async Task<CriarProdutoPayload> CriarProdutoAsync(
+        CriarProdutoInput input,
+        AppDbContext db,
+        CancellationToken cancellationToken)
     {
         Produto produto = new()
         {
@@ -13,6 +19,9 @@ public sealed class Mutation
             Preco = input.Preco,
             Estoque = input.Estoque
         };
+
+        db.Produtos.Add(produto);
+        await db.SaveChangesAsync(cancellationToken);
 
         return new CriarProdutoPayload { Produto = produto };
     }
