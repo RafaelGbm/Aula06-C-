@@ -57,3 +57,18 @@ mutation RejeitarNomeInvalido($input: CriarProdutoInput!) {
     }
   }
 }
+
+# Executar depois de CriarProduto, usando o id retornado.
+# Variáveis:
+# {
+#   "id": 4
+# }
+query ConfirmarProduto($id: Int!) {
+  produtoPorId(id: $id) {
+    id
+    nome
+    categoria
+    preco
+    estoque
+  }
+}
