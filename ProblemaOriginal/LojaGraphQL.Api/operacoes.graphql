@@ -21,3 +21,39 @@ mutation CriarProduto($input: CriarProdutoInput!) {
     }
   }
 }
+
+# Esperado: erro com o código PRODUTO_PRECO_INVALIDO.
+# Variáveis:
+# {
+#   "input": {
+#     "nome": "Produto inválido da aula",
+#     "categoria": "Teste",
+#     "preco": 0,
+#     "estoque": 1
+#   }
+# }
+mutation RejeitarPrecoInvalido($input: CriarProdutoInput!) {
+  criarProduto(input: $input) {
+    produto {
+      id
+    }
+  }
+}
+
+# Esperado: erro com o código PRODUTO_NOME_INVALIDO.
+# Variáveis:
+# {
+#   "input": {
+#     "nome": "   ",
+#     "categoria": "Teste",
+#     "preco": 10,
+#     "estoque": 1
+#   }
+# }
+mutation RejeitarNomeInvalido($input: CriarProdutoInput!) {
+  criarProduto(input: $input) {
+    produto {
+      id
+    }
+  }
+}
