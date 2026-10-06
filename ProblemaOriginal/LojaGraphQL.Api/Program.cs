@@ -34,6 +34,7 @@ public partial class Program
         builder.Services
             .AddGraphQLServer()
             .AddQueryType<Query>()
+            .AddMutationType<Mutation>()
             .AddProjections()
             .AddFiltering()
             .AddSorting();
