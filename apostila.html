@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Aula 7 — GraphQL Write e contêiner local</title>
+<style>
+:root {
+  --bg: #08080d;
+  --card: #14141d;
+  --card-2: #1b1b27;
+  --fg: #f5f5f7;
+  --muted: #aaaab6;
+  --accent: #ed0973;
+  --accent-2: #ff65ae;
+  --border: #30303e;
+  --warning: #facc15;
+  --danger: #fb7185;
+  --success: #4ade80;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--fg);
+  background: var(--bg);
+  font: 17px/1.65 "Segoe UI", system-ui, sans-serif;
+}
+.progress { position: fixed; inset: 0 0 auto; height: 4px; z-index: 100; }
+.progress span { display: block; width: 0; height: 100%; background: var(--accent); }
+.topbar {
+  position: sticky; top: 0; z-index: 90;
+  padding: .8rem max(1rem, calc((100vw - 1180px) / 2));
+  background: rgba(8, 8, 13, .94); border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+.brand { color: var(--accent); font-weight: 900; text-decoration: none; letter-spacing: .06em; }
+.brand span { color: var(--fg); font-weight: 600; }
+.page { max-width: 1180px; margin: auto; padding: 0 1.2rem; }
+.hero {
+  padding: 5rem 0 3rem;
+  border-bottom: 3px solid var(--accent);
+  background: radial-gradient(circle at 80% 20%, rgba(237, 9, 115, .18), transparent 35%);
+}
+.eyebrow { color: var(--accent-2); font-weight: 800; text-transform: uppercase; letter-spacing: .1em; }
+h1 { max-width: 850px; margin: .2rem 0 1rem; font-size: clamp(2.5rem, 7vw, 5rem); line-height: 1; }
+.lead { max-width: 800px; color: var(--muted); font-size: 1.2rem; }
+.pills { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.5rem; }
+.pills span { padding: .3rem .75rem; border: 1px solid var(--border); border-radius: 999px; color: var(--accent-2); }
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 3rem; padding: 3rem 0 5rem; }
+.layout > *, main, .toc { min-width: 0; }
+.toc { position: sticky; top: 4.5rem; align-self: start; display: grid; gap: .4rem; max-height: calc(100vh - 6rem); overflow: auto; }
+.toc strong { color: var(--accent); margin-bottom: .5rem; }
+.toc a { color: var(--muted); text-decoration: none; padding: .25rem 0; overflow-wrap: anywhere; }
+.toc a:hover { color: var(--fg); }
+.chapter { margin-bottom: 4.5rem; scroll-margin-top: 5rem; }
+h2 { margin: 0 0 1.4rem; color: var(--accent-2); font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1.15; }
+.block-paragraph, .block-list, .block-quote, .block-table, .block-code, .callout, .cards-grid { margin: 1rem 0 1.4rem; }
+.block-code {
+  max-width: 100%; overflow: auto; padding: 1.1rem; border: 1px solid var(--border);
+  border-radius: 10px; background: #0d0d14; color: #f8d4e6;
+}
+.block-caption { color: var(--muted); font-size: .92rem; margin-top: -.8rem; }
+.block-table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; }
+.block-table th, .block-table td { padding: .7rem .8rem; border: 1px solid var(--border); text-align: left; }
+.block-table th { background: rgba(237, 9, 115, .16); color: var(--accent-2); }
+.block-quote { padding: 1rem 1.3rem; border-left: 4px solid var(--accent); background: var(--card); }
+.callout { padding: 1rem 1.2rem; border: 1px solid var(--border); border-left: 5px solid var(--accent); border-radius: 8px; background: var(--card); }
+.callout-priority, .callout-warning { border-left-color: var(--warning); }
+.callout-danger { border-left-color: var(--danger); }
+.callout-success { border-left-color: var(--success); }
+.cards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.cards-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.card { min-width: 0; padding: 1.1rem; border: 1px solid var(--border); border-radius: 10px; background: var(--card); }
+.card strong { display: block; color: var(--accent-2); margin-bottom: .45rem; }
+.card .block-paragraph, .card .block-list { margin-bottom: 0; }
+a { color: var(--accent-2); }
+.page-nav { display: flex; justify-content: space-between; gap: 1rem; margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.page-nav a { text-decoration: none; font-weight: 700; }
+footer { padding: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); text-align: center; }
+@media (max-width: 800px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .toc { position: static; max-height: none; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
+  .cards-grid, .cards-cols-2 { grid-template-columns: 1fr; }
+}
+@media print {
+  .progress, .topbar, .toc, .page-nav { display: none; }
+  body { color: #111; background: #fff; font-size: 11pt; }
+  .page { max-width: none; }
+  .layout { display: block; padding-top: 1rem; }
+  .hero { padding: 1rem 0; background: none; }
+  .chapter { break-inside: avoid; margin-bottom: 2rem; }
+  .block-code, .card, .callout, .block-quote { color: #111; background: #fff; border-color: #999; }
+}
+
+</style>
+</head>
+<body>
+<div class="progress" aria-hidden="true"><span id="reading-progress"></span></div>
+<header class="topbar">
+  <a class="brand" href="#top">FIAP <span>C# Software Development</span></a>
+</header>
+
+<div class="page" id="top">
+  <header class="hero">
+<p class="eyebrow">Aula 7</p>    <h1>Aula 7 — GraphQL Write e contêiner local</h1>
+<p class="lead">Referência rápida para adicionar escrita ao GraphQL (Graph Query Language) e executar a API ASP.NET Core em um contêiner local.</p>    <div class="pills"><span>GraphQL</span><span>Mutation</span><span>Hot Chocolate</span><span>EF Core</span><span>Docker</span><span>.NET 10</span></div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="Neste material">
+      <strong>Neste material</strong>
+<a href="#fluxo">Fluxo da aula</a><a href="#contrato">Contrato em C#</a><a href="#resolver">Resolver de escrita</a><a href="#validacao">Validação e erros</a><a href="#registro">Registro no schema</a><a href="#operacao">Mutation com variável</a><a href="#docker">Comandos do contêiner</a><a href="#diagnostico">Diagnóstico rápido</a><a href="#entrega">Checklist de entrega</a><a href="#referencias">Referências</a>    </nav>
+
+    <main>
+      <section class="chapter" id="fluxo">
+        <h2>Fluxo da aula</h2>
+        <pre class="block-code"><code>Query
+  ↓ observa o estado
+Mutation + Input
+  ↓ valida e chama o resolver
+Entity Framework Core
+  ↓ SaveChangesAsync
+SQLite
+  ↓ gera o identificador
+Payload
+  ↓ devolve os campos selecionados
+Query
+  ↓ confirma a persistência
+</code></pre>
+      </section>
+      <section class="chapter" id="contrato">
+        <h2>Contrato em C#</h2>
+        <pre class="block-code"><code>public sealed class CriarProdutoInput
+{
+    public string Nome { get; init; } = string.Empty;
+    public string Categoria { get; init; } = string.Empty;
+    public decimal Preco { get; init; }
+    public int Estoque { get; init; }
+}
+
+public sealed class CriarProdutoPayload
+{
+    public required Produto Produto { get; init; }
+}
+</code></pre><div class="callout callout-priority">Não use <code>Produto</code> diretamente como input: a entidade contém campos controlados pelo servidor e relacionamentos que não pertencem à operação de criação.</div><table class="block-table"><thead><tr><th>Tipo</th><th>Responsabilidade</th></tr></thead><tbody><tr><td><code>Produto</code></td><td>Mapear o estado persistido pelo EF Core.</td></tr><tr><td><code>CriarProdutoInput</code></td><td>Definir somente os dados aceitos na criação.</td></tr><tr><td><code>CriarProdutoPayload</code></td><td>Definir o resultado devolvido pela mutation.</td></tr></tbody></table>
+      </section>
+      <section class="chapter" id="resolver">
+        <h2>Resolver de escrita</h2>
+        <pre class="block-code"><code>public async Task&lt;CriarProdutoPayload&gt; CriarProdutoAsync(
+    CriarProdutoInput input,
+    AppDbContext db,
+    CancellationToken cancellationToken)
+{
+    Produto produto = new()
+    {
+        Nome = input.Nome.Trim(),
+        Categoria = input.Categoria.Trim(),
+        Preco = input.Preco,
+        Estoque = input.Estoque
+    };
+
+    db.Produtos.Add(produto);
+    await db.SaveChangesAsync(cancellationToken);
+
+    return new CriarProdutoPayload { Produto = produto };
+}
+</code></pre>
+      </section>
+      <section class="chapter" id="validacao">
+        <h2>Validação e erros</h2>
+        <pre class="block-code"><code>if (string.IsNullOrWhiteSpace(nome))
+{
+    throw CreateError(
+        &quot;Informe o nome do produto.&quot;,
+        &quot;PRODUTO_NOME_INVALIDO&quot;);
+}
+
+if (input.Preco &lt;= 0)
+{
+    throw CreateError(
+        &quot;O preço deve ser maior que zero.&quot;,
+        &quot;PRODUTO_PRECO_INVALIDO&quot;);
+}
+</code></pre>
+      </section>
+      <section class="chapter" id="registro">
+        <h2>Registro no schema</h2>
+        <pre class="block-code"><code>builder.Services
+    .AddGraphQLServer()
+    .AddQueryType&lt;Query&gt;()
+    .AddMutationType&lt;Mutation&gt;()
+    .AddProjections()
+    .AddFiltering()
+    .AddSorting();
+</code></pre>
+      </section>
+      <section class="chapter" id="operacao">
+        <h2>Mutation com variável</h2>
+        <pre class="block-code"><code>mutation CriarProduto($input: CriarProdutoInput!) {
+  criarProduto(input: $input) {
+    produto {
+      id
+      nome
+      preco
+    }
+  }
+}
+</code></pre><pre class="block-code"><code>{
+  &quot;input&quot;: {
+    &quot;nome&quot;: &quot;Webcam 4K&quot;,
+    &quot;categoria&quot;: &quot;Vídeo&quot;,
+    &quot;preco&quot;: 799.90,
+    &quot;estoque&quot;: 4
+  }
+}
+</code></pre>
+      </section>
+      <section class="chapter" id="docker">
+        <h2>Comandos do contêiner</h2>
+        <pre class="block-code"><code>docker build -f .\LojaGraphQL.Api\Dockerfile -t loja-graphql:aula07 .
+docker run -d --rm --name loja-graphql-aula07 -p 8080:8080 loja-graphql:aula07
+docker ps
+docker logs loja-graphql-aula07
+docker stop loja-graphql-aula07
+</code></pre><table class="block-table"><thead><tr><th>Elemento</th><th>Função</th></tr></thead><tbody><tr><td>Dockerfile</td><td>Receita da imagem.</td></tr><tr><td>Imagem</td><td>Pacote imutável da aplicação.</td></tr><tr><td>Contêiner</td><td>Processo criado a partir da imagem.</td></tr><tr><td><code>EXPOSE 8080</code></td><td>Documenta a porta da aplicação.</td></tr><tr><td><code>-p 8080:8080</code></td><td>Mapeia a porta do computador para o contêiner.</td></tr></tbody></table>
+      </section>
+      <section class="chapter" id="diagnostico">
+        <h2>Diagnóstico rápido</h2>
+        <table class="block-table"><thead><tr><th>Sintoma</th><th>Verificação</th></tr></thead><tbody><tr><td><code>criarProduto</code> não aparece</td><td>Confirmar <code>.AddMutationType&lt;Mutation&gt;()</code>.</td></tr><tr><td>Identificador retorna zero</td><td>Confirmar <code>await db.SaveChangesAsync(...)</code> antes do payload.</td></tr><tr><td>Produto inválido foi salvo</td><td>Validar antes de <code>db.Produtos.Add</code>.</td></tr><tr><td>Build Docker não encontra projeto</td><td>Executar o comando na pasta que contém a solução.</td></tr><tr><td><code>localhost:8080</code> não responde</td><td>Confirmar <code>docker ps</code>, logs e <code>-p 8080:8080</code>.</td></tr><tr><td>Dados somem após <code>docker stop</code></td><td>A execução usa <code>--rm</code> e não configura volume.</td></tr></tbody></table>
+      </section>
+      <section class="chapter" id="entrega">
+        <h2>Checklist de entrega</h2>
+        <ul class="block-list"><li><code>dotnet test</code> mostra oito testes aprovados.</li><li>A mutation válida retorna um identificador.</li><li>A query encontra o produto criado.</li><li>O caso inválido retorna código de erro.</li><li>A imagem <code>loja-graphql:aula07</code> existe.</li><li>O endpoint <code>/graphql</code> funciona no contêiner.</li></ul>
+      </section>
+      <section class="chapter" id="referencias">
+        <h2>Referências</h2>
+        <ul class="block-list"><li><a href="https://graphql.org/learn/mutations/">GraphQL Foundation — Mutations</a></li><li><a href="https://chillicream.com/docs/hotchocolate/defining-a-schema/mutations">Hot Chocolate — Mutations</a></li><li><a href="https://learn.microsoft.com/ef/core/saving/basic">Entity Framework Core — salvar dados</a></li><li><a href="https://docs.docker.com/build/concepts/dockerfile/">Docker — Dockerfile overview</a></li><li><a href="https://learn.microsoft.com/visualstudio/containers/container-tools">Microsoft — Visual Studio Container Tools</a></li></ul>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<footer>Professor Rafael Cassiolato</footer>
+<script>
+function updateReadingProgress() {
+  const root = document.documentElement;
+  const scrollable = root.scrollHeight - root.clientHeight;
+  const percent = scrollable > 0 ? (root.scrollTop / scrollable) * 100 : 0;
+  document.getElementById("reading-progress").style.width = `${percent}%`;
+}
+document.addEventListener("scroll", updateReadingProgress, { passive: true });
+updateReadingProgress();
+
+</script>
+</body>
+</html>

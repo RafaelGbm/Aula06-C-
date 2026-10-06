@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aula 7 — GraphQL Write e contêiner local</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --fg: #f5f5f7;
+  --accent: #ED0973;
+  --accent-light: #ff5aa8;
+  --accent-dark: #B00757;
+  --muted: #a1a1aa;
+  --code-bg: #1a1a24;
+  --border: #2d2d3a;
+  --card: #14141c;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI", -apple-system, Roboto, sans-serif;
+}
+.deck { position: relative; width: 100vw; height: 100vh; }
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  padding: 5rem 6rem 4rem;
+  animation: fade .3s ease-out;
+}
+.slide.active { display: flex; }
+@keyframes fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.logo {
+  position: fixed;
+  top: 1.2rem;
+  left: 1.8rem;
+  color: var(--accent);
+  font-weight: 900;
+  font-size: 1.6rem;
+  letter-spacing: .05em;
+  z-index: 10;
+}
+.logo::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 26px;
+  margin-right: .4rem;
+  vertical-align: middle;
+  background: var(--accent);
+  border-radius: 2px;
+}
+.accent-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-dark));
+  z-index: 10;
+}
+.credit {
+  position: fixed;
+  bottom: 1.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: .8rem;
+  z-index: 10;
+}
+h1 {
+  margin: 0 0 1rem;
+  color: var(--accent);
+  font-size: 3.5rem;
+  line-height: 1.05;
+}
+h2 {
+  display: inline-block;
+  margin: 0 0 1.8rem;
+  padding-bottom: .6rem;
+  border-bottom: 3px solid var(--accent);
+  font-size: 2.4rem;
+}
+h3 {
+  margin: .8rem 0 .5rem;
+  color: var(--accent);
+  font-size: 1.2rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+p, li { font-size: 1.35rem; line-height: 1.5; }
+code {
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--accent-light);
+  font-family: Consolas, monospace;
+}
+pre {
+  padding: 1.3rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: var(--code-bg);
+  font-size: 1.1rem;
+  line-height: 1.45;
+}
+pre code { padding: 0; border: 0; color: var(--fg); }
+.block-caption { margin: .5rem 0 0; color: var(--muted); font-size: 1rem; }
+.center { text-align: center; }
+.subtitle { margin: 0; color: var(--muted); font-size: 1.55rem; }
+.block-list { list-style: none; padding-left: 0; }
+.block-list li { position: relative; margin: .7rem 0; padding-left: 2rem; }
+.block-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .55rem;
+  width: 11px;
+  height: 11px;
+  background: var(--accent);
+  transform: rotate(45deg);
+}
+ol.block-list {
+  list-style: decimal;
+  padding-left: 2rem;
+}
+ol.block-list li {
+  padding-left: .2rem;
+}
+ol.block-list li::before {
+  content: none;
+}
+.cards-grid {
+  display: grid;
+  gap: 1rem;
+}
+.cards-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.cards-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.card {
+  padding: 1.2rem;
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  background: var(--card);
+}
+.card strong {
+  display: block;
+  margin-bottom: .45rem;
+  color: var(--accent-light);
+  font-family: Consolas, monospace;
+  font-size: 1.35rem;
+}
+.card p { margin: 0; color: var(--muted); font-size: 1rem; }
+.card .block-paragraph { margin: 0 0 .5rem; }
+.callout {
+  margin: 1rem 0;
+  padding: 1rem 1.4rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: rgba(237, 9, 115, .1);
+  font-size: 1.2rem;
+}
+.callout-priority { border-left-color: var(--accent-light); }
+.block-table { width: 100%; border-collapse: collapse; font-size: 1.15rem; }
+.block-table th, .block-table td { padding: .7rem; border: 1px solid var(--border); text-align: left; }
+.block-table th { background: var(--accent); }
+.http-flow-diagram {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(420px, 2.4fr) minmax(150px, .8fr);
+  gap: 1.6rem;
+  align-items: center;
+  width: 100%;
+}
+.http-peer {
+  display: flex;
+  min-height: 150px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.4rem;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  text-align: center;
+}
+.http-peer span {
+  color: var(--muted);
+  font-size: .8rem;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.http-peer strong {
+  margin-top: .5rem;
+  color: var(--accent-light);
+  font-size: 1.5rem;
+}
+.http-exchange {
+  display: grid;
+  gap: 1.2rem;
+}
+.http-message {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.http-message-copy {
+  display: grid;
+  min-width: 155px;
+  gap: .45rem;
+}
+.http-message-copy strong { font-size: 1rem; }
+.http-message-copy code {
+  width: fit-content;
+  font-size: .9rem;
+}
+.http-track {
+  position: relative;
+  height: 4px;
+  flex: 1;
+  background: var(--border);
+}
+.http-track::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-top: 3px solid var(--accent);
+  border-right: 3px solid var(--accent);
+  transform: translateY(-50%) rotate(45deg);
+}
+.http-response .http-track::after {
+  right: auto;
+  left: -1px;
+  transform: translateY(-50%) rotate(-135deg);
+}
+.http-packet {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  background: var(--accent-light);
+  box-shadow: 0 0 18px rgba(255, 90, 168, .8);
+  opacity: 0;
+  transform: translateY(-50%);
+}
+.slide.active .http-request .http-packet {
+  animation: http-request-travel 6s ease-in-out infinite;
+}
+.slide.active .http-response .http-packet {
+  animation: http-response-travel 6s ease-in-out infinite;
+}
+.http-processing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(237, 9, 115, .08);
+  color: var(--muted);
+}
+.http-processing span { color: var(--accent); font-weight: 800; }
+.slide.active .http-processing {
+  animation: http-processing-pulse 6s ease-in-out infinite;
+}
+.http-flow-caption {
+  margin: 2rem 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 1rem;
+}
+@keyframes http-request-travel {
+  0%, 5% { left: 0; opacity: 0; }
+  10% { opacity: 1; }
+  30% { left: calc(100% - 18px); opacity: 1; }
+  34%, 100% { left: calc(100% - 18px); opacity: 0; }
+}
+@keyframes http-processing-pulse {
+  0%, 32%, 58%, 100% {
+    border-color: var(--border);
+    box-shadow: none;
+    color: var(--muted);
+  }
+  39%, 51% {
+    border-color: var(--accent);
+    box-shadow: 0 0 22px rgba(237, 9, 115, .28);
+    color: var(--fg);
+  }
+}
+@keyframes http-response-travel {
+  0%, 56% { left: calc(100% - 18px); opacity: 0; }
+  62% { opacity: 1; }
+  82% { left: 0; opacity: 1; }
+  86%, 100% { left: 0; opacity: 0; }
+}
+.nav {
+  position: fixed;
+  right: 1.8rem;
+  bottom: 1.2rem;
+  padding: .4rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  z-index: 10;
+}
+.hint {
+  position: fixed;
+  left: 3rem;
+  bottom: 1.2rem;
+  color: var(--muted);
+  font-size: .8rem;
+  z-index: 10;
+}
+@media (max-width: 900px) {
+  .slide { padding: 4.5rem 2rem 3.5rem; }
+  h1 { font-size: 2.7rem; }
+  h2 { font-size: 2rem; }
+  p, li { font-size: 1.05rem; }
+  .cards-cols-3 { grid-template-columns: repeat(2, 1fr); }
+  .cards-cols-2 { grid-template-columns: 1fr; }
+  pre { font-size: .9rem; }
+  .http-flow-diagram {
+    grid-template-columns: 120px minmax(280px, 1fr) 120px;
+    gap: .8rem;
+  }
+  .http-peer { min-height: 120px; padding: .8rem; }
+  .http-peer strong { font-size: 1.1rem; }
+  .http-message-copy { min-width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide.active .http-request .http-packet,
+  .slide.active .http-response .http-packet,
+  .slide.active .http-processing {
+    animation: none;
+  }
+  .http-request .http-packet { left: calc(100% - 18px); opacity: 1; }
+  .http-response .http-packet { left: 0; opacity: 1; }
+}
+
+</style>
+</head>
+<body>
+<div class="logo">FIAP</div>
+<div class="accent-bar"></div>
+<div class="credit">Professor Rafael Cassiolato</div>
+
+<div class="deck">
+  <section class="slide active center">
+    <h1>Consultar é suficiente?</h1>
+<p class="subtitle">Da query que lê à mutation que altera o sistema</p><p style="margin-top: 3rem; color: var(--muted);">GraphQL · Mutation · EF Core · Docker · .NET 10</p>  </section>
+
+  <section class="slide">
+    <h2>O que já sabemos e o que falta</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Aula anterior</strong><ul class="block-list"><li>Schema e Query.</li><li>Resolvers com EF Core.</li><li>Variáveis, filtros e projeções.</li><li>Leitura pelo Nitro.</li></ul></div>
+      <div class="card"><strong>Problema de hoje</strong><ul class="block-list"><li>Receber dados do cliente.</li><li>Validar a entrada.</li><li>Persistir um produto.</li><li>Empacotar a aplicação.</li></ul></div>
+    </div>
+    <div class="callout callout-priority">A sequência da aula é curta: <strong>query → mutation → query → contêiner</strong>.</div>
+  </section>
+
+  <section class="slide">
+    <h2>Por que criar <code>CriarProdutoInput</code>?</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Contrato da operação</strong><pre class="block-code"><code>public sealed class CriarProdutoInput
+{
+    public string Nome { get; init; } = string.Empty;
+    public string Categoria { get; init; } = string.Empty;
+    public decimal Preco { get; init; }
+    public int Estoque { get; init; }
+}
+</code></pre><p class="block-paragraph">Hot Chocolate infere o input GraphQL a partir dessa classe.</p></div>
+      <div class="card"><strong>Por que não receber <code>Produto</code>?</strong><ul class="block-list"><li>A entidade também possui <code>Id</code>, <code>Ativo</code> e relacionamentos.</li><li>O cliente controlaria campos que pertencem ao servidor.</li><li>Uma mudança no banco poderia alterar a API sem intenção.</li><li>Create e update normalmente aceitam campos diferentes.</li></ul><div class="callout callout-priority">A entidade representa persistência; o input representa a intenção de criar um produto.</div></div>
+    </div>
+    
+  </section>
+
+  <section class="slide">
+    <h2>O resolver persiste a mudança</h2>
+    <pre class="block-code"><code>public async Task&lt;CriarProdutoPayload&gt; CriarProdutoAsync(
+    CriarProdutoInput input,
+    AppDbContext db,
+    CancellationToken cancellationToken)
+{
+    Produto produto = new()
+    {
+        Nome = input.Nome.Trim(),
+        Categoria = input.Categoria.Trim(),
+        Preco = input.Preco,
+        Estoque = input.Estoque
+    };
+
+    db.Produtos.Add(produto);
+    await db.SaveChangesAsync(cancellationToken);
+
+    return new CriarProdutoPayload { Produto = produto };
+}
+</code></pre>
+<p class="block-caption">O identificador é preenchido após <code>SaveChangesAsync</code>.</p>  </section>
+
+  <section class="slide">
+    <h2>O tipo Mutation precisa entrar no schema</h2>
+    <pre class="block-code"><code>builder.Services
+    .AddGraphQLServer()
+    .AddQueryType&lt;Query&gt;()
+    .AddMutationType&lt;Mutation&gt;()
+    .AddProjections()
+    .AddFiltering()
+    .AddSorting();
+</code></pre>
+<p class="block-caption">Criar a classe sem chamar <code>AddMutationType&lt;Mutation&gt;()</code> não expõe a operação.</p>  </section>
+
+  <section class="slide">
+    <h2>Mutation nomeada com variável</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Operação</strong><pre class="block-code"><code>mutation CriarProduto($input: CriarProdutoInput!) {
+  criarProduto(input: $input) {
+    produto {
+      id
+      nome
+      preco
+    }
+  }
+}
+</code></pre></div>
+      <div class="card"><strong>Variáveis</strong><pre class="block-code"><code>{
+  &quot;input&quot;: {
+    &quot;nome&quot;: &quot;Webcam 4K&quot;,
+    &quot;categoria&quot;: &quot;Vídeo&quot;,
+    &quot;preco&quot;: 799.90,
+    &quot;estoque&quot;: 4
+  }
+}
+</code></pre></div>
+    </div>
+    
+  </section>
+
+  <section class="slide">
+    <h2>Como comprovar a escrita</h2>
+    <div class="cards-grid cards-cols-3"><div class="card"><strong>Estado inicial</strong><p class="block-paragraph">Execute <code>produtos</code> e observe os dados atuais.</p></div><div class="card"><strong>Mutation</strong><p class="block-paragraph">Crie o produto e capture o identificador retornado.</p></div><div class="card"><strong>Nova leitura</strong><p class="block-paragraph">Consulte pelo identificador ou nome e confirme a persistência.</p></div></div>
+    
+  </section>
+
+  <section class="slide">
+    <h2>Valide antes de escrever no banco</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Regra mínima</strong><ul class="block-list"><li>Nome não pode ser vazio.</li><li>Preço deve ser maior que zero.</li><li>Entrada inválida não chega ao banco.</li></ul></div>
+      <div class="card"><strong>Implementação em C#</strong><pre class="block-code"><code>if (string.IsNullOrWhiteSpace(nome))
+{
+    throw CreateError(
+        &quot;Informe o nome do produto.&quot;,
+        &quot;PRODUTO_NOME_INVALIDO&quot;);
+}
+
+if (input.Preco &lt;= 0)
+{
+    throw CreateError(
+        &quot;O preço deve ser maior que zero.&quot;,
+        &quot;PRODUTO_PRECO_INVALIDO&quot;);
+}
+</code></pre></div>
+    </div>
+    
+  </section>
+
+  <section class="slide">
+    <h2>Docker em três ideias</h2>
+    <div class="cards-grid cards-cols-3"><div class="card"><strong>Dockerfile</strong><p class="block-paragraph">Receita versionada para construir a aplicação.</p></div><div class="card"><strong>Imagem</strong><p class="block-paragraph">Pacote imutável com aplicação e dependências.</p></div><div class="card"><strong>Contêiner</strong><p class="block-paragraph">Processo em execução criado a partir da imagem.</p></div></div>
+    <div class="callout callout-priority">Docker não é o deploy desta aula; é apenas outra forma de executar a mesma API.</div>
+  </section>
+
+  <section class="slide">
+    <h2>Leia somente as instruções essenciais</h2>
+    <pre class="block-code"><code>FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet publish -c Release -o /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
+WORKDIR /app
+COPY --from=build /app/publish .
+EXPOSE 8080
+ENTRYPOINT [&quot;dotnet&quot;, &quot;LojaGraphQL.Api.dll&quot;]
+</code></pre>
+<p class="block-caption"><code>sdk</code> compila; <code>aspnet</code> executa. A imagem final não precisa carregar o kit de desenvolvimento.</p>  </section>
+
+  <section class="slide">
+    <h2>Construir, iniciar, observar e parar</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Comandos</strong><pre class="block-code"><code>docker build `
+  -f .\LojaGraphQL.Api\Dockerfile `
+  -t loja-graphql:aula07 .
+
+docker run `
+  -d `
+  --rm `
+  --name loja-graphql-aula07 `
+  -p 8080:8080 `
+  loja-graphql:aula07
+
+docker logs loja-graphql-aula07
+docker stop loja-graphql-aula07
+</code></pre></div>
+      <div class="card"><strong>Parâmetros</strong><table class="block-table"><thead><tr><th>Parâmetro</th><th>Significado</th></tr></thead><tbody><tr><td><code>-f</code></td><td>Caminho do Dockerfile.</td></tr><tr><td><code>-t</code></td><td>Nome e tag da imagem.</td></tr><tr><td><code>.</code></td><td>Contexto enviado ao build.</td></tr><tr><td><code>-d</code></td><td>Executa em segundo plano.</td></tr><tr><td><code>--rm</code></td><td>Remove ao parar.</td></tr><tr><td><code>--name</code></td><td>Define o nome do contêiner.</td></tr><tr><td><code>-p</code></td><td>Mapeia porta local e porta interna.</td></tr></tbody></table></div>
+    </div>
+    
+  </section>
+
+  <section class="slide">
+    <h2>O que acontece com o banco?</h2>
+    <div class="cards-grid cards-cols-2">
+      <div class="card"><strong>Durante a execução</strong><p class="block-paragraph">A mutation grava no SQLite e a query encontra o novo produto.</p></div>
+      <div class="card"><strong>Após remover o contêiner</strong><p class="block-paragraph">O arquivo local é descartado porque nenhum volume foi configurado.</p></div>
+    </div>
+    <div class="callout callout-priority">Volumes são importantes, mas não são necessários para o objetivo desta aula.</div>
+  </section>
+
+  <section class="slide">
+    <h2>Laboratório — escreva, confirme e empacote</h2>
+    <p class="block-paragraph">Continue o projeto concluído na Aula 06 e implemente os tickets em ordem.</p><ol class="block-list"><li>Criar as classes de entrada e saída (LAB-001).</li><li>Expor a mutation no schema (LAB-002).</li><li>Persistir um produto válido (LAB-003).</li><li>Rejeitar entradas inválidas (LAB-004).</li><li>Comprovar a escrita com uma query (LAB-005).</li><li>Executar a aplicação em um contêiner (LAB-006).</li></ol>
+  </section>
+
+</div>
+
+<div class="nav"><span id="cur">1</span> / <span id="tot">13</span></div>
+<div class="hint">Use as setas do teclado ou clique para navegar</div>
+
+<script>
+const slides = document.querySelectorAll(".slide");
+const current = document.getElementById("cur");
+const total = document.getElementById("tot");
+let index = 0;
+
+total.textContent = slides.length;
+
+function show(nextIndex) {
+  index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+  slides.forEach((slide, slideIndex) => {
+    slide.classList.toggle("active", slideIndex === index);
+  });
+  current.textContent = index + 1;
+}
+
+document.addEventListener("keydown", event => {
+  if (["ArrowRight", " ", "PageDown"].includes(event.key)) show(index + 1);
+  if (["ArrowLeft", "PageUp"].includes(event.key)) show(index - 1);
+  if (event.key === "Home") show(0);
+  if (event.key === "End") show(slides.length - 1);
+});
+
+document.addEventListener("click", event => {
+  if (event.target.closest("a, button, input, textarea, select")) return;
+  show(event.clientX > window.innerWidth / 2 ? index + 1 : index - 1);
+});
+
+show(0);
+
+</script>
+</body>
+</html>

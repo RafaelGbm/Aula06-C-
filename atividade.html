@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aula 7 — GraphQL Write e contêiner local — Atividade</title>
+  <link rel="icon" href="data:,">
+  <style>
+:root {
+  color-scheme: dark;
+  --bg: #090d18;
+  --surface: #111827;
+  --surface-2: #182235;
+  --border: #2b3952;
+  --fg: #e5edf9;
+  --muted: #93a4bf;
+  --accent: #38bdf8;
+  --danger: #fb7185;
+  --warning: #fbbf24;
+  --success: #34d399;
+  --optional: #a78bfa;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Segoe UI", sans-serif;
+}
+header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: .7rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+header strong { color: var(--accent); font-size: 1.15rem; }
+header span { color: var(--muted); font-size: .82rem; }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+.clear-button {
+  padding: .45rem .65rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: .75rem;
+}
+.progress-tracker {
+  width: 150px;
+  display: grid;
+  gap: .35rem;
+}
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: .72rem;
+}
+.progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #080d18;
+}
+.progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), var(--success));
+  transition: width .3s ease;
+}
+main {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+}
+aside {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem;
+  border-right: 1px solid var(--border);
+  background: #0d1321;
+}
+.filter {
+  width: 100%;
+  margin-bottom: .5rem;
+  padding: .75rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+.filter.active {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--fg);
+}
+.filter.completed { color: var(--success); }
+.filter.optional { color: #c4b5fd; }
+.content {
+  min-height: 0;
+  padding: 1.2rem 1.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.toolbar h1 { margin: 0; font-size: 1.4rem; }
+.badge {
+  display: inline-block;
+  padding: .25rem .55rem;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, .14);
+  color: var(--accent);
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.badge.optional {
+  background: rgba(167, 139, 250, .14);
+  color: #c4b5fd;
+}
+.ticket {
+  display: none;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+.ticket.active {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+.ticket-head {
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.ticket-head h2 { margin: .4rem 0 0; font-size: 1.25rem; }
+.ticket-body {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1.4rem;
+  overflow-y: auto;
+}
+.panel {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #0d1423;
+}
+.panel h3 {
+  margin: 0 0 .7rem;
+  color: var(--accent);
+  font-size: .85rem;
+  text-transform: uppercase;
+}
+.panel p { margin: 0; line-height: 1.55; }
+.panel .block-paragraph { margin: 0 0 .5rem; }
+.panel .block-paragraph:last-child { margin-bottom: 0; }
+.panel ol, .panel ul, .panel .block-list {
+  margin: 0;
+  padding-left: 1.3rem;
+  line-height: 1.6;
+}
+.panel li { margin-bottom: .25rem; }
+.implementation { border-left: 4px solid var(--warning); }
+.acceptance { border-left: 4px solid var(--success); }
+.validation { border-left: 4px solid var(--accent); }
+.dependency { border-left: 4px solid var(--optional); }
+.references { border-left: 4px solid var(--accent); }
+.block-table, table { width: 100%; border-collapse: collapse; }
+.block-table th, .block-table td, th, td {
+  padding: .45rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: .85rem;
+}
+.block-table th, th { width: 42%; color: var(--muted); }
+.callout {
+  margin: .6rem 0 0;
+  padding: .7rem .9rem;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, .1);
+}
+code {
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #080d18;
+  color: #bae6fd;
+}
+pre, .block-code {
+  margin: .7rem 0 0;
+  padding: .8rem;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: #080d18;
+}
+pre code, .block-code code { padding: 0; color: var(--fg); }
+.cards-grid { display: grid; gap: .7rem; margin-top: .5rem; }
+.cards-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.cards-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.card {
+  padding: .7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0d1423;
+}
+.ticket-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 1.4rem 1rem;
+}
+.complete-button {
+  min-width: 165px;
+  padding: .58rem .9rem;
+  border: 1px solid #2f855f;
+  border-radius: 8px;
+  background: #143b2d;
+  color: #b8f7d9;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: .8rem;
+}
+.complete-button.completed {
+  border-color: #52627b;
+  background: #202b3d;
+  color: #d1d9e8;
+}
+footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: .55rem;
+  padding: .3rem 1rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .72rem;
+}
+.spark {
+  position: fixed;
+  z-index: 1000;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warning);
+  pointer-events: none;
+  animation: spark .65s ease-out forwards;
+}
+@keyframes spark {
+  to {
+    opacity: 0;
+    transform: translate(var(--x), var(--y)) scale(.2);
+  }
+}
+#fireworks {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+@media (max-width: 820px) {
+  html, body { overflow: auto; height: auto; }
+  main { grid-template-columns: 1fr; }
+  aside {
+    display: flex;
+    gap: .5rem;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .filter { min-width: 210px; }
+  .content { min-height: 720px; }
+  .ticket-body { grid-template-columns: 1fr; }
+}
+
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <strong>Tickets da atividade</strong>
+      <span>Aula 7 — GraphQL Write e contêiner local</span>
+    </div>
+    <div class="header-actions">
+      <button class="clear-button" id="clear-progress" type="button">Limpar</button>
+      <div class="progress-tracker">
+        <div class="progress-label">
+          <span>Progresso</span>
+          <strong id="progress-value">0%</strong>
+        </div>
+        <div class="progress-track"><div class="progress-bar" id="progress-bar"></div></div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <button class="filter active" data-ticket="LAB-001">LAB-001 · Criar as classes de entrada e saída</button>
+      <button class="filter" data-ticket="LAB-002">LAB-002 · Expor a mutation no schema</button>
+      <button class="filter" data-ticket="LAB-003">LAB-003 · Persistir um produto válido</button>
+      <button class="filter" data-ticket="LAB-004">LAB-004 · Rejeitar entradas inválidas</button>
+      <button class="filter" data-ticket="LAB-005">LAB-005 · Comprovar a escrita com uma query</button>
+      <button class="filter" data-ticket="LAB-006">LAB-006 · Executar a aplicação em um contêiner</button>
+    </aside>
+
+    <section class="content">
+      <div class="toolbar">
+        <h1>Tickets da atividade</h1>
+        <span class="badge">6 obrigatórios · 0 opcionais</span>
+      </div>
+
+      <article class="ticket active" id="LAB-001" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">GraphQL</span>
+          <h2>Criar as classes de entrada e saída</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p class="block-paragraph">A operação de criação precisa receber somente os campos permitidos ao cliente e devolver o produto criado.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Criar <code>GraphQL\Mutation.cs</code>.</li><li>Criar a classe <code>CriarProdutoInput</code> com nome, categoria, preço e estoque.</li><li>Criar a classe <code>CriarProdutoPayload</code> contendo o produto criado.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>O projeto compila.</li><li><code>CriarProdutoInput</code> não contém <code>Id</code>, <code>Ativo</code> ou relacionamentos.</li><li><code>CriarProdutoPayload</code> contém uma propriedade <code>Produto</code>.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <pre class="block-code"><code>dotnet build
+</code></pre>
+          </div>
+          <div class="panel references">
+            <h3>Referências</h3>
+            <ul class="block-list"><li><a href="https://chillicream.com/docs/hotchocolate/defining-a-schema/mutations">Hot Chocolate — Mutations</a></li></ul>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-001">Marcar como concluído</button>
+        </div>
+      </article>
+      <article class="ticket" id="LAB-002" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">GraphQL</span>
+          <h2>Expor a mutation no schema</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p>Concluir <code>LAB-001</code>.</p>
+            <p class="block-paragraph">As classes de entrada e saída existem, mas o schema ainda não oferece uma operação de escrita.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Criar a classe pública <code>Mutation</code>.</li><li>Criar <code>CriarProduto</code>, recebendo <code>CriarProdutoInput</code>.</li><li>Montar um objeto <code>Produto</code> com os dados do input.</li><li>Retornar <code>CriarProdutoPayload</code> sem acessar o banco neste ticket.</li><li>Registrar <code>.AddMutationType&lt;Mutation&gt;()</code> depois de <code>.AddQueryType&lt;Query&gt;()</code>.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>O schema possui o tipo raiz <code>Mutation</code>.</li><li>O campo <code>criarProduto</code> recebe um único argumento <code>input</code>.</li><li>O retorno possui o campo <code>produto</code>.</li><li>A operação ainda não promete persistência.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <p class="block-paragraph">Abrir a documentação do schema no Nitro, localizar <code>Mutation</code> e confirmar o campo <code>criarProduto</code>.</p>
+          </div>
+          <div class="panel references">
+            <h3>Referências</h3>
+            <ul class="block-list"><li><a href="https://chillicream.com/docs/hotchocolate/defining-a-schema/mutations">Hot Chocolate — Mutations</a></li></ul>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-002">Marcar como concluído</button>
+        </div>
+      </article>
+      <article class="ticket" id="LAB-003" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">C# e EF Core</span>
+          <h2>Persistir um produto válido</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p>Concluir <code>LAB-002</code>.</p>
+            <p class="block-paragraph">A mutation já aparece no schema, mas o produto retornado ainda não é salvo no banco.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Tornar <code>CriarProduto</code> assíncrono.</li><li>Receber <code>AppDbContext</code> e <code>CancellationToken</code>.</li><li>Adicionar o produto a <code>db.Produtos</code>.</li><li>Chamar <code>SaveChangesAsync(cancellationToken)</code>.</li><li>Retornar o payload somente depois da persistência.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>Uma entrada válida retorna identificador maior que zero.</li><li>O registro permanece no banco após o fim da mutation.</li><li>O <code>CancellationToken</code> é repassado ao EF Core.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <p class="block-paragraph">Executar <code>CriarProduto</code> de <code>operacoes.graphql</code> e observar o identificador retornado.</p>
+          </div>
+          <div class="panel references">
+            <h3>Referências</h3>
+            <ul class="block-list"><li><a href="https://learn.microsoft.com/ef/core/saving/basic">Entity Framework Core — salvar dados</a></li><li><a href="https://learn.microsoft.com/ef/core/miscellaneous/async">Entity Framework Core — APIs assíncronas</a></li></ul>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-003">Marcar como concluído</button>
+        </div>
+      </article>
+      <article class="ticket" id="LAB-004" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">Validação</span>
+          <h2>Rejeitar entradas inválidas</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p>Concluir <code>LAB-003</code>.</p>
+            <p class="block-paragraph">A mutation persiste qualquer valor recebido. O servidor precisa impedir dados inválidos antes de chamar o banco.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Remover os espaços externos do nome.</li><li>Rejeitar nome vazio com o código <code>PRODUTO_NOME_INVALIDO</code>.</li><li>Rejeitar preço menor ou igual a zero com o código <code>PRODUTO_PRECO_INVALIDO</code>.</li><li>Executar as validações antes de <code>db.Produtos.Add</code>.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>Nome em branco retorna erro legível.</li><li>Preço inválido retorna erro legível.</li><li>Nenhuma entrada inválida é persistida.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <p class="block-paragraph">Executar <code>RejeitarPrecoInvalido</code> e <code>RejeitarNomeInvalido</code> de <code>operacoes.graphql</code>.</p>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-004">Marcar como concluído</button>
+        </div>
+      </article>
+      <article class="ticket" id="LAB-005" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">GraphQL</span>
+          <h2>Comprovar a escrita com uma query</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p>Concluir <code>LAB-004</code>.</p>
+            <p class="block-paragraph">O payload informa o resultado da mutation, mas uma nova leitura comprova que o estado do sistema realmente mudou.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Executar a mutation válida.</li><li>Copiar o identificador retornado.</li><li>Executar <code>produtoPorId</code> usando esse identificador.</li><li>Comparar os dados da mutation com os dados da query.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>A query encontra o produto criado.</li><li>Nome, categoria, preço e estoque correspondem ao input.</li><li>O fluxo pode ser repetido no Nitro.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <p class="block-paragraph">Executar <code>CriarProduto</code> e depois <code>ConfirmarProduto</code> de <code>operacoes.graphql</code>.</p>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-005">Marcar como concluído</button>
+        </div>
+      </article>
+      <article class="ticket" id="LAB-006" data-required="true">
+        <div class="ticket-head">
+          <span class="badge">Docker</span>
+          <h2>Executar a aplicação em um contêiner</h2>
+        </div>
+        <div class="ticket-body">
+          <div class="panel dependency">
+            <h3>Dependência</h3>
+            <p>Concluir <code>LAB-005</code>.</p>
+            <p class="block-paragraph">A aplicação já funciona com <code>dotnet run</code>. Agora ela deve funcionar da mesma maneira a partir de uma imagem.</p>
+          </div>
+          <div class="panel implementation">
+            <h3>Implementação solicitada</h3>
+            <ol class="block-list"><li>Ler o Dockerfile e identificar as imagens de build e runtime.</li><li>Construir a imagem com a tag <code>loja-graphql:aula07</code>.</li><li>Criar o contêiner mapeando a porta 8080.</li><li>Abrir <code>/graphql</code> e executar o fluxo write-then-read.</li><li>Consultar os logs e parar o contêiner.</li></ol>
+          </div>
+          <div class="panel acceptance">
+            <h3>Critérios de aceite</h3>
+            <ul class="block-list"><li>A imagem aparece em <code>docker images</code>.</li><li>O contêiner aparece em <code>docker ps</code>.</li><li><code>http://localhost:8080/graphql</code> responde.</li><li>A mutation e a query funcionam dentro do contêiner.</li><li>Os logs mostram a aplicação escutando na porta 8080.</li></ul>
+          </div>
+          <div class="panel validation">
+            <h3>Validação</h3>
+            <pre class="block-code"><code>docker build -f .\LojaGraphQL.Api\Dockerfile -t loja-graphql:aula07 .
+docker run -d --rm --name loja-graphql-aula07 -p 8080:8080 loja-graphql:aula07
+docker ps
+docker logs loja-graphql-aula07
+docker stop loja-graphql-aula07
+</code></pre>
+          </div>
+          <div class="panel references">
+            <h3>Referências</h3>
+            <ul class="block-list"><li><a href="https://docs.docker.com/build/concepts/dockerfile/">Docker — Dockerfile overview</a></li><li><a href="https://learn.microsoft.com/visualstudio/containers/container-tools">Microsoft — Visual Studio Container Tools</a></li></ul>
+          </div>
+        </div>
+        <div class="ticket-footer">
+          <button class="complete-button" data-complete="LAB-006">Marcar como concluído</button>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <span>Professor Rafael Cassiolato</span>
+  </footer>
+  <canvas id="fireworks"></canvas>
+
+  <script>
+    const STORAGE_KEY = "lesson-builder-fiap-csharp-aula-07-graphql-write-docker-tickets";
+const filters = document.querySelectorAll(".filter");
+const tickets = document.querySelectorAll(".ticket");
+const requiredTickets = [...tickets].filter(ticket => ticket.dataset.required === "true");
+const completeButtons = document.querySelectorAll(".complete-button");
+const progressBar = document.querySelector("#progress-bar");
+const progressValue = document.querySelector("#progress-value");
+const completed = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"));
+
+filters.forEach(filter => {
+  filter.addEventListener("click", () => {
+    filters.forEach(item => item.classList.toggle("active", item === filter));
+    tickets.forEach(ticket => {
+      ticket.classList.toggle("active", ticket.id === filter.dataset.ticket);
+    });
+  });
+});
+
+completeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    const ticketId = button.dataset.complete;
+    const wasCompleted = completed.has(ticketId);
+
+    if (wasCompleted) {
+      completed.delete(ticketId);
+    } else {
+      completed.add(ticketId);
+      createSparks(button);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...completed]));
+    updateProgress(!wasCompleted);
+  });
+});
+
+document.querySelector("#clear-progress").addEventListener("click", () => {
+  completed.clear();
+  localStorage.removeItem(STORAGE_KEY);
+  updateProgress(false);
+});
+
+function updateProgress(celebrate) {
+  const requiredCompleted = requiredTickets.filter(ticket =>
+    completed.has(ticket.id)).length;
+  const percentage = requiredTickets.length === 0
+    ? 0
+    : Math.round((requiredCompleted / requiredTickets.length) * 100);
+
+  progressBar.style.width = `${percentage}%`;
+  progressValue.textContent = `${percentage}%`;
+
+  completeButtons.forEach(button => {
+    const done = completed.has(button.dataset.complete);
+    button.classList.toggle("completed", done);
+    button.textContent = done ? "Reabrir ticket" : "Marcar como concluído";
+  });
+
+  filters.forEach(filter => {
+    const done = completed.has(filter.dataset.ticket);
+    filter.classList.toggle("completed", done);
+    const label = filter.textContent.replace(/^✓\s*/, "");
+    filter.textContent = done ? `✓ ${label}` : label;
+  });
+
+  if (celebrate && percentage === 100) {
+    startFireworks(5000);
+  }
+}
+
+function createSparks(button) {
+  const rect = button.getBoundingClientRect();
+  const originX = rect.left + rect.width / 2;
+  const originY = rect.top + rect.height / 2;
+
+  for (let index = 0; index < 14; index++) {
+    const spark = document.createElement("span");
+    const angle = (Math.PI * 2 * index) / 14;
+    const distance = 28 + Math.random() * 28;
+    spark.className = "spark";
+    spark.style.left = `${originX}px`;
+    spark.style.top = `${originY}px`;
+    spark.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
+    spark.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
+    document.body.append(spark);
+    spark.addEventListener("animationend", () => spark.remove());
+  }
+}
+
+function startFireworks(durationMs) {
+  const canvas = document.querySelector("#fireworks");
+  const context = canvas.getContext("2d");
+  const particles = [];
+  const colors = ["#38bdf8", "#34d399", "#fbbf24", "#fb7185", "#a78bfa"];
+  const startedAt = performance.now();
+  let lastBurst = 0;
+
+  function resize() {
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+    context.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+
+  function burst() {
+    const x = window.innerWidth * (.15 + Math.random() * .7);
+    const y = window.innerHeight * (.15 + Math.random() * .5);
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    for (let index = 0; index < 45; index++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.8 + Math.random() * 4;
+      particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1,
+        color
+      });
+    }
+  }
+
+  function frame(now) {
+    context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+    if (now - lastBurst > 280 && now - startedAt < durationMs - 700) {
+      burst();
+      lastBurst = now;
+    }
+
+    for (let index = particles.length - 1; index >= 0; index--) {
+      const particle = particles[index];
+      particle.x += particle.vx;
+      particle.y += particle.vy;
+      particle.vy += .035;
+      particle.life -= .014;
+
+      if (particle.life <= 0) {
+        particles.splice(index, 1);
+        continue;
+      }
+
+      context.globalAlpha = particle.life;
+      context.fillStyle = particle.color;
+      context.beginPath();
+      context.arc(particle.x, particle.y, 2.4, 0, Math.PI * 2);
+      context.fill();
+    }
+
+    context.globalAlpha = 1;
+
+    if (now - startedAt < durationMs || particles.length > 0) {
+      requestAnimationFrame(frame);
+    } else {
+      context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    }
+  }
+
+  resize();
+  requestAnimationFrame(frame);
+}
+
+updateProgress(false);
+
+  </script>
+</body>
+</html>
